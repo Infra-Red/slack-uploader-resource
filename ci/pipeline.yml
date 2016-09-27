@@ -1,0 +1,41 @@
+resources:
+- name: slack-uploader-develop
+  type: git
+  source:
+    uri: git@github.com:Infra-Red/slack-uploader-resource.git
+    branch: develop
+    private_key: {{git-private-key}}
+- name: slack-uploader
+  type: slack-uploader
+  source:
+    auth_token: {{slack-auth-token}}
+
+resource_types:
+- name: slack-uploader
+  type: docker-image
+  source:
+    repository: andreikrasnitski/slack-uploader-resource
+    tag: latest
+
+jobs:
+- name: dumb-upload
+  plan:
+  - get: slack-uploader-develop
+  - task: dump-task
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: andreikrasnitski/concourse}
+      inputs:
+        - { name: slack-uploader-develop }
+      outputs:
+        - { name: slack-uploader-develop-out }
+      run:
+        path: ./slack-uploader-develop/ci/run
+        args: []
+  - put: slack-uploader
+    params:
+      channel: {{slack-channel}}
+      file: slack-uploader-develop/README.md
+

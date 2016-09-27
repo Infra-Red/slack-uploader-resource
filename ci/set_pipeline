@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+fly -t concourse set-pipeline --pipeline slack-uploader --config pipeline.yml --load-vars-from secret.yml
+fly -t concourse unpause-pipeline --pipeline slack-uploader

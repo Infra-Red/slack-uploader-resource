@@ -1,0 +1,3 @@
+#!/bin/dumb-init /bin/bash
+
+mv ./slack-uploader-develop/* ./slack-uploader-develop-out/

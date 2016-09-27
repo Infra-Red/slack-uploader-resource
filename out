@@ -1,0 +1,52 @@
+#!/usr/bin/dumb-init /bin/bash
+
+set -e
+
+# Colors
+RED='\033[1;31m'
+NC='\033[0m' # No Color
+
+exec 3>&1
+exec 1>&2
+
+source=$1
+cd $source
+
+#
+# Get parameters from the pipeline
+#
+payload=$(mktemp /tmp/resource-in.XXXXXX)
+cat > "$payload" <&0
+
+SLACK_TOKEN=$(jq -r '(.source.auth_token // "")' < "$payload")
+file=$(jq '(.params.file)' < "${payload}")
+CHANNEL=$(jq -r '(.params.channel)' < "$payload")
+
+#
+# Check parameters
+#
+if [ -z "$SLACK_TOKEN" ]; then
+     printf "\n ${RED} Error! The Slack authentication token is not specified! Please, add the 'source.auth_token' property to your resource declaration. ${NC}\n"
+     exit 1
+fi
+
+if [ -z "$CHANNEL" ]; then
+     printf "\n ${RED} Error! The Slack channel is not specified! Please, add the 'params.channel' property to your resource parameters. ${NC}\n"
+     exit 1
+fi
+
+#
+# Upload file to Slack
+#
+file="$(eval printf ${file})"
+
+http --ignore-stdin --pretty=format -f POST https://slack.com/api/files.upload \
+  file@${file} \
+  channels=${CHANNEL} \
+  token=${SLACK_TOKEN}
+
+#
+# Print the output
+#
+timestamp="$(jq -n "{version:{timestamp:\"$(date +%s)\"}}")"
+echo "$timestamp" | jq -s add >&3
